@@ -1,0 +1,49 @@
+if AvailableCreatures == nil then AvailableCreatures = {} end
+
+AvailableCreatures[1] = "NAME:Nothing~"
+
+AvailableCreatures[2] = "NAME:Bluegreen Chromis~IMGR:assets.prod.novaquark.com/131682/a40ef7b5-0330-4db8-b2d3-016353c13edf.png~SIZEX:40~SIZEY:25~MAXY:250~MINY:120~CTHRU:1~SPD:13~PWR:5~AGGRO:1~METAB:150~SPECIAL:0~ABILITY:~DESC:A species of damselfish, made popular amongst collectors by its vibrant colors. Small, peaceful and nonterritorial, they live near to the surface.~PRICE:50~"
+
+AvailableCreatures[3] = "NAME:Clownfish~IMGR:assets.prod.novaquark.com/131682/3019aa71-ad5f-48c1-bb9f-ce03240297b2.png~SIZEX:30~SIZEY:20~MAXY:350~MINY:180~CTHRU:1~SPD:11~PWR:6~AGGRO:2~METAB:150~SPECIAL:0~ABILITY:~DESC:A fish which survived in nature thanks to a strong symbiotic relationship with sea anemones.~PRICE:50~"
+
+AvailableCreatures[4] = "NAME:Mosaic Tang~IMGR:assets.prod.novaquark.com/131682/b2c1d68b-c9ad-4630-8897-a01d51f1b649.png~SIZEX:35~SIZEY:25~MAXY:350~MINY:180~CTHRU:1~SPD:11~PWR:6~AGGRO:2~METAB:150~SPECIAL:0~ABILITY:~DESC:A colorful tang variant with elaborate markings and patterns. Collectors often begin their journey with this species.~PRICE:50~"
+
+AvailableCreatures[5] = "NAME:Tail-Spot Wrasse~IMGR:assets.prod.novaquark.com/131682/4e434e3c-2d02-4b6c-a601-44c2855cba66.png~SIZEX:45~SIZEY:25~MAXY:450~MINY:380~CTHRU:1~SPD:7~PWR:9~AGGRO:4~METAB:150~SPECIAL:0~ABILITY:~DESC:A colorful fish that prefers water near to the bottom of the reef, where it can blend in to the colors and shapes of coral.~PRICE:75~"
+
+local creatureListLayer = createLayer()
+local rx, ry = getResolution()
+local font1 = loadFont("BankGothic", 25)
+local font2 = loadFont("TurretRoad", 50)
+setLayerOrigin(creatureListLayer, rx /2, ry / 2)
+setLayerRotation(creatureListLayer, (3.14 / 2)*3)
+input = getInput()
+output = ""
+
+function StrFind(String, Key)
+    found, start = string.find(String, Key)
+    subString = string.sub(String, start + 1, string.len(String))
+    fin = string.find(subString, '~')
+    return string.sub(subString, 1, fin - 1)
+end
+
+addText(creatureListLayer, font2, "Available Species :", 285, -140)
+
+
+
+local i = 1
+while i < #AvailableCreatures do
+    i = i + 1
+    addText(creatureListLayer, font1, "".. i - 1 ..": "..StrFind(AvailableCreatures[i], "NAME:"), 220, -140  + (i * 30))
+    
+end
+
+if input == "GetTotal" then
+    output = "TOTAL:"..#AvailableCreatures.."~"
+elseif string.sub(input, 1, 11) == "GetSpecies:" then
+    output = AvailableCreatures[math.floor(string.sub(input, 12, string.len(input)))] or ""
+elseif input == "" then
+    output = ""
+end
+setOutput(output)
+
+

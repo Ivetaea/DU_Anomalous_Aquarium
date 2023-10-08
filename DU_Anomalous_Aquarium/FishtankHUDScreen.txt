@@ -1,0 +1,577 @@
+    
+    -- * Function Definitions * --
+
+--Find variable in string
+function StrFind(String, Key)
+    if String == nil then
+        return "0000000000"
+    else
+        
+        found, start = string.find(String, Key)
+        if found == nil or start == nil then
+            return "0000000000"
+        end
+        subString = string.sub(String, start + 1, string.len(String))
+        fin = string.find(subString, '~')
+        if fin == nil or start == nil then
+        return "0000000000"
+        end
+        return string.sub(subString, 1, fin - 1)
+    end
+end
+
+--Create Circular Button
+
+function circleButton(X, Y, R, ButtonFunc, Desc)
+    local centerDist = math.sqrt( (math.abs(X - Mouse.XPos)^2) + (math.abs(Y - Mouse.YPos)^2) )
+    --glow effect
+    if currentFrame < 26 then
+        setNextShadow(textLayer, 2 + (currentFrame / 4), ButtonRed, ButtonGreen, ButtonBlue, 1)
+    else
+        setNextShadow(textLayer, 2 + (13 - (currentFrame / 4)), ButtonRed, ButtonGreen, ButtonBlue, 1)
+    end
+    --white outline
+    setNextStrokeWidth(textLayer, 0.5)
+    setNextStrokeColor(textLayer, 0.75, 0.75, 0.75, 1)
+    if centerDist < R and Mouse.down == true then
+        setNextFillColor(textLayer, 0.55, 0.95, 0.55, 0.80)
+        if MouseDownCD == 0 then
+            ButtonFunc()
+            MouseDownCD = 1
+        end
+    elseif centerDist < R then --Halfway visible when hovered
+    setNextFillColor(textLayer, 0.55, 0.55, 0.55, 0.30)
+    else  --nearly transparent if not hovered
+    setNextFillColor(textLayer, 0.15, 0.15, 0.15, 0.10)
+    end
+    addCircle(textLayer, X, Y, R)
+    addText(textLayer, font2, Desc, X - (R / 2) - (R / 8), Y + 5)
+end
+
+--Create Menu Button
+
+function squareButton(X, Y, XS, YS, R, ButtonFunc)
+    --glow effect
+    if currentFrame < 26 then
+        setNextShadow(textLayer, 2 + (currentFrame / 4), ButtonRed, ButtonGreen, ButtonBlue, 1)
+    else
+        setNextShadow(textLayer, 2 + (13 - (currentFrame / 4)), ButtonRed, ButtonGreen, ButtonBlue, 1)
+    end
+    --white outline
+    setNextStrokeWidth(textLayer, 0.5)
+    setNextStrokeColor(textLayer, 0.75, 0.75, 0.75, 1)
+    if Mouse.XPos > (X + 1) and Mouse.XPos < (X + (XS - 1)) and Mouse.YPos > (Y + 1) and Mouse.YPos < (Y + (YS - 1)) and Mouse.down == true then
+        setNextFillColor(textLayer, 0.55, 0.95, 0.55, 0.80)
+        if MouseDownCD == 0 then
+            ButtonFunc()
+            MouseDownCD = 1
+        end
+    elseif Mouse.XPos > (X + 1) and Mouse.XPos < (X + (XS - 1)) and Mouse.YPos > (Y + 1) and Mouse.YPos < (Y + (YS - 1)) then --Halfway visible when hovered
+        setNextFillColor(textLayer, 0.55, 0.55, 0.55, 0.30)
+    else  --nearly transparent if not hovered
+        setNextFillColor(textLayer, 0.15, 0.15, 0.15, 0.10)
+    end
+    addBoxRounded(textLayer, X, Y, XS, YS, R)
+end
+    
+    
+
+--used to reset Equipped creatures when choosing different species as not to mix old choices into the new array
+    function updateEquipped() 
+EquippedCreatures[1] = ChosenCreatures[Slot[1]]
+EquippedCreatures[2] = ChosenCreatures[Slot[2]]
+EquippedCreatures[3] = ChosenCreatures[Slot[3]]
+EquippedCreatures[4] = ChosenCreatures[Slot[4]]
+EquippedCreatures[5] = ChosenCreatures[Slot[5]]
+EquippedCreatures[6] = ChosenCreatures[Slot[6]]
+EquippedCreatures[7] = ChosenCreatures[Slot[7]]
+EquippedCreatures[8] = ChosenCreatures[Slot[8]]    end
+
+
+-- * Setup * --
+rx, ry = getResolution()
+Mouse = {}
+Mouse.down = getCursorDown() --true and false
+Mouse.XPos, Mouse.YPos = getCursor()
+input = getInput()
+
+if getCursorReleased() == true then
+    MouseDownCD = 0
+end
+
+font1 = loadFont("BankGothic", 40)
+font2 = loadFont("TurretRoad", 14)
+font3 = loadFont("TurretRoad", 18)
+waterLayer = createLayer()
+textLayer = createLayer()
+BGLayer = createLayer()
+actualWater = loadImage("assets.prod.novaquark.com/38363/45185f78-9d31-4472-8876-40a5544e5cd5.png")
+-- * Global Variable Initialization * --
+    
+    
+if INIT == nil then
+    currentFrame = 0
+    AvailableCreatures = {}
+    ChosenCreatures = {}
+    EquippedCreatures = {}
+    CreatureGrowth = {}
+    
+    UserChips = 0
+    DLCProducts = {}
+    DLCImages = {}
+    selectedDLC = nil
+    DLCPage = 0
+    DLCCanBuy = 0
+    DLCConfirm = 0
+    
+    MODE = "NORMAL"
+    STATE = "LOADING"
+    ButtonGreen = 0.75
+    ButtonRed = 0.1
+    ButtonBlue = 0.4
+    MouseDownCD = 0
+    
+    
+EnableLightOrbs = 0
+EnableRain = 1
+EnableStorms = 1
+BGI = 2    
+    BGL = {}
+    BGL[1] = "assets.prod.novaquark.com/131682/ed15241d-2dfd-4546-9d09-860ad0804b5e.png"
+    BGL[2] = "assets.prod.novaquark.com/131682/d21390d4-0100-4149-afee-5c7ce7dc0b07.jpg"
+    BGL[3] = "assets.prod.novaquark.com/131682/572b6e63-3a50-4015-90a0-9297421bf7a0.jpg"
+    BGL[4] = "assets.prod.novaquark.com/131682/10672cd2-5734-4d51-b984-1fef571d77ed.jpg"
+    
+    BGS = {}
+    
+    
+Species = {}
+Species[1] = 2
+Species[2] = 3
+Species[3] = 4
+Species[4] = 5
+Species[5] = 1
+Slot = {}
+Slot[1] = 5
+Slot[2] = 2
+Slot[3] = 4
+Slot[4] = 5
+Slot[5] = 2
+Slot[6] = 3
+Slot[7] = 5
+Slot[8] = 1
+AvailableCreatures[1] = "NAME:Nothing~"
+
+AvailableCreatures[2] = "NAME:Bluegreen Chromis~IMGR:assets.prod.novaquark.com/131682/a40ef7b5-0330-4db8-b2d3-016353c13edf.png~SIZEX:40~SIZEY:25~MAXY:250~MINY:120~CTHRU:1~SPD:13~PWR:5~AGGRO:1~METAB:150~SPECIAL:0~ABILITY:~DESC:A species of damselfish, made popular amongst collectors by its vibrant colors. Small, peaceful and nonterritorial, they live near to the surface.~PRICE:50~"
+
+AvailableCreatures[3] = "NAME:Clownfish~IMGR:assets.prod.novaquark.com/131682/3019aa71-ad5f-48c1-bb9f-ce03240297b2.png~SIZEX:30~SIZEY:20~MAXY:350~MINY:180~CTHRU:1~SPD:11~PWR:6~AGGRO:2~METAB:150~SPECIAL:0~ABILITY:~DESC:A fish which survived in nature thanks to a strong symbiotic relationship with sea anemones.~PRICE:50~"
+
+AvailableCreatures[4] = "NAME:Mosaic Tang~IMGR:assets.prod.novaquark.com/131682/b2c1d68b-c9ad-4630-8897-a01d51f1b649.png~SIZEX:35~SIZEY:25~MAXY:350~MINY:180~CTHRU:1~SPD:11~PWR:6~AGGRO:2~METAB:150~SPECIAL:0~ABILITY:~DESC:A colorful tang variant with elaborate markings and patterns. Collectors often begin their journey with this species.~PRICE:50~"
+
+AvailableCreatures[5] = "NAME:Tail-Spot Wrasse~IMGR:assets.prod.novaquark.com/131682/4e434e3c-2d02-4b6c-a601-44c2855cba66.png~SIZEX:45~SIZEY:25~MAXY:450~MINY:380~CTHRU:1~SPD:7~PWR:9~AGGRO:4~METAB:150~SPECIAL:0~ABILITY:~DESC:A colorful fish that prefers water near to the bottom of the reef, where it can blend in to the colors and shapes of coral.~PRICE:75~"
+
+ChosenCreatures[1] = AvailableCreatures[2] or AvailableCreatures[1]
+
+ChosenCreatures[2] = AvailableCreatures[3] or AvailableCreatures[2]
+
+ChosenCreatures[3] = AvailableCreatures[4] or AvailableCreatures[3]
+
+ChosenCreatures[4] = AvailableCreatures[5] or AvailableCreatures[4]
+
+ChosenCreatures[5] = AvailableCreatures[1] or AvailableCreatures[1]
+
+EquippedCreatures[1] = ChosenCreatures[5] or AvailableCreatures[1]
+
+EquippedCreatures[2] = ChosenCreatures[2] or AvailableCreatures[2]
+
+EquippedCreatures[3] = ChosenCreatures[4] or AvailableCreatures[3]
+
+EquippedCreatures[4] = ChosenCreatures[5] or AvailableCreatures[4]
+
+EquippedCreatures[5] = ChosenCreatures[2] or AvailableCreatures[1]
+
+EquippedCreatures[6] = ChosenCreatures[3] or AvailableCreatures[2]
+
+EquippedCreatures[7] = ChosenCreatures[5] or AvailableCreatures[3]
+
+EquippedCreatures[8] = ChosenCreatures[1] or AvailableCreatures[4]
+    
+    INIT = "COMPLETE"
+end
+
+
+-- * Water Effect * --
+
+currentFrame = currentFrame + 1
+
+if currentFrame >= 53 then
+    currentFrame = 0 
+end
+
+setNextFillColor(waterLayer, 1, 1, 1, 0.14)
+addImageSub(waterLayer, actualWater, 0, 0, rx, ry, 0, currentFrame * 167, 275, ry)
+
+
+-- * Mode detection * --
+if input == "PBOFF" then
+    STATUS = "SLEEP"
+    MODE = "NORMAL"
+    
+elseif input == "PBON" then
+    STATUS = "ONLINE"
+elseif input == "PBLOAD" then
+    STATUS = "LOADING"
+end
+
+if STATUS == "ONLINE" then
+    setNextFillColor(textLayer, 0.25, 2, 0, 2)
+    addText(textLayer, font2, "SYSTEM ONLINE", 700, 580)
+    ButtonRed = 0.1
+    ButtonGreen = 0.75
+    ButtonBlue = 0.4
+elseif STATUS == "SLEEP" then
+    setNextFillColor(textLayer, 1, 0.1, 2, 2)
+    addText(textLayer, font2, "SYSTEM IN SLEEP MODE", 670, 580)
+    ButtonGreen = 0.1
+    ButtonRed = 0.65
+    ButtonBlue = 0.95
+else
+    setNextFillColor(textLayer, 1, 1, 0, 2)
+    addText(textLayer, font2, "SYSTEM LOADING...", 700, 580)
+    ButtonRed = 0.75
+    ButtonGreen = 0.75
+    ButtonBlue = 0.4
+end
+
+
+
+--Menu Buttons
+--config
+OutputFunc = function() if STATUS == "ONLINE" then if MODE == "CONFIGURE" then MODE = "NORMAL" else MODE = "CONFIGURE" end end MouseDownCD = 1 end
+squareButton(407, 560, 30, 30, 5, OutputFunc)
+addLine(textLayer, 412, 567, 432, 567)
+addLine(textLayer, 412, 575, 432, 575)
+addLine(textLayer, 412, 583, 432, 583)
+--DLC
+OutputFunc = function() if STATUS == "ONLINE" then if MODE == "DOWNLOAD" then MODE = "NORMAL" UserChips = 0
+    DLCProducts = {}
+    DLCImages = {}
+    selectedDLC = nil
+    DLCPage = 0
+    DLCCanBuy = 0
+    DLCConfirm = 0 
+    connection = nil
+    else MODE = "DOWNLOAD" end end MouseDownCD = 1 end
+squareButton(590, 560, 30, 30, 5, OutputFunc)
+addBox(textLayer, 602, 565, 6, 14)
+addTriangle(textLayer, 594, 576, 605, 585, 616, 576)
+
+
+--Feed the critters! 
+    OutputFunc = function() if STATUS == "ONLINE" then setOutput("FEED") end end
+    circleButton(512, 575, 20, OutputFunc, "")
+    addBezier(textLayer, 524, 560, 490, 575, 524, 590)
+    addCircle(textLayer, 522, 568, 3)
+    addLine(textLayer, 509, 578, 525, 578)
+    addCircle(textLayer, 502, 565, 1)
+    addCircle(textLayer, 498, 582, 1)
+
+-- * Normal Mode - Clear view with DLC, feeding, and menu buttons * --
+if MODE == "NORMAL" then
+--some normal mode stuff could possibly go here.
+
+-- * Configuration mode: allows selection of different fish species as well as different fish in each particular slot * --
+elseif MODE == "CONFIGURE" then
+    setNextFillColor(textLayer, 0.25, 0.45, 0.65, 0.80)
+    addBoxRounded(textLayer, 110, 110, rx - 220, ry - 220, 10)
+    -- Creature Type Change --
+    --header
+    
+    
+    
+    
+    --draw species selection buttons
+    addText(textLayer, font3, "Choose Aquarium Species:", 150, 145)
+    
+    i = 0
+    while i < 5 do
+        i = i + 1
+        addText(textLayer, font2, StrFind(ChosenCreatures[i], "NAME:"), 200, 149 + (i * 40)) 
+OutputFunc = function() Species[i] = Species[i] - 1 if Species[i] < 1 then Species[i] = #AvailableCreatures end  ChosenCreatures[i] = AvailableCreatures[Species[i]] updateEquipped() end
+circleButton(165, 145 + (i * 40), 13, OutputFunc, " < ")
+OutputFunc = function() Species[i] = Species[i] + 1 if Species[i] > #AvailableCreatures then Species[i] = 1 end  ChosenCreatures[i] = AvailableCreatures[Species[i]] updateEquipped() end
+circleButton(350, 145 + (i * 40), 13, OutputFunc, " > ")
+    end
+
+    --draw slot selection buttons
+    addText(textLayer, font3, "Aquarium Slots:", 500, 145)
+    i = 0
+    while i < 8 do
+        i = i + 1
+        addText(textLayer, font2, StrFind(EquippedCreatures[i], "NAME:"), 510, 140 + (i * 40))
+OutputFunc = function() Slot[i] = Slot[i] - 1 if Slot[i] < 1 then Slot[i] = #ChosenCreatures end EquippedCreatures[i] = ChosenCreatures[Slot[i]] end
+circleButton(475, 135 + (i * 40), 13, OutputFunc, " < ")
+OutputFunc = function() Slot[i] = Slot[i] + 1 if Slot[i] > #AvailableCreatures then Slot[i] = 1 end EquippedCreatures[i] = ChosenCreatures[Slot[i]] end
+circleButton(660, 135 + (i * 40), 13, OutputFunc, " > ")
+    end
+    
+    
+    -- Backgrounds: --
+    addText(textLayer, font3, "Background Options", 185, 405)
+    
+    i = 0
+    while i < 4 do
+        i = i + 1
+        OutputFunc = function() BGI = i setOutput("BG"..i) end
+        squareButton(55 + (i * 75), 420, 65, 65, 4, OutputFunc, "   "..i)
+        BGS[i] = loadImage(BGL[i])
+        setNextFillColor(BGLayer, 1, 1, 1, 1)
+        addImage(BGLayer, BGS[i], 57 + (i * 75), 422, 61, 61)
+    end
+
+    setNextFillColor(BGLayer, 0, 0, 0, 0)
+    setNextStrokeWidth(BGLayer, 2)
+    setNextStrokeColor(BGLayer, 0.1, 2.85, 0.4, 2)
+    addBoxRounded(BGLayer, 61 + (75 * BGI), 426, 53, 53, 2)
+    
+    -- Other Options --
+    addText(textLayer, font3, " Allow Rain", 730, 150)
+    OutputFunc = function() if EnableRain == 1 then EnableRain = 0 else EnableRain = 1 end setOutput("ENABLERAIN:"..EnableRain.."~") end 
+    circleButton(785, 180, 14, OutputFunc, " ~ ")
+    setNextFillColor(textLayer, 0, 0, 0, 0)
+    setNextStrokeWidth(textLayer, 2)
+    if EnableRain == 1 then
+        setNextStrokeColor(textLayer, 0.1, 1, 0.4, 2)
+    else
+        setNextStrokeColor(textLayer, 0.85, 0.1, 1, 2)
+    end
+    addCircle(textLayer, 785, 180, 8)
+    
+    addText(textLayer, font3, "Allow Storms", 730, 220)
+    OutputFunc = function() if EnableStorms == 1 then EnableStorms = 0 else EnableStorms = 1 end setOutput("ENABLESTORMS:"..EnableStorms.."~") end 
+    circleButton(785, 250, 14, OutputFunc, " ~ ")
+    setNextFillColor(textLayer, 0, 0, 0, 0)
+    setNextStrokeWidth(textLayer, 2)
+    if EnableStorms == 1 then
+        setNextStrokeColor(textLayer, 0.1, 1, 0.4, 2)
+    else
+        setNextStrokeColor(textLayer, 0.85, 0.1, 1, 2)
+    end
+    addCircle(textLayer, 785, 250, 8)
+    
+    addText(textLayer, font3, "Dynamic Lights", 730, 290)
+    OutputFunc = function() if EnableLightOrbs == 1 then EnableLightOrbs = 0 else EnableLightOrbs = 1 end setOutput("ENABLELIGHTORBS:"..EnableLightOrbs.."~") end 
+    circleButton(785, 320, 14, OutputFunc, " ~ ")
+    setNextFillColor(textLayer, 0, 0, 0, 0)
+    setNextStrokeWidth(textLayer, 2)
+    if EnableLightOrbs == 1 then
+        setNextStrokeColor(textLayer, 0.1, 1, 0.4, 2)
+    else
+        setNextStrokeColor(textLayer, 0.85, 0.1, 1, 2)
+    end
+    addCircle(textLayer, 785, 320, 8)
+    
+    -- Trigger Renderscript Cycle (SAVE PROGRESS): --
+    addText(textLayer, font3, "Apply Changes", 730, 380)
+    addText(textLayer, font2, "and", 780, 395)
+    addText(textLayer, font3, "Save Progress", 730, 415)
+    OutputFunc = function() setOutput("SAVE:".."CS1:"..Species[1].."~CS2:"..Species[2].."~CS3:"..Species[3].."~CS4:"..Species[4].."~CS5:"..Species[5].."~ES1:"..Slot[1].."~ES2:"..Slot[2].."~ES3:"..Slot[3].."~ES4:"..Slot[4].."~ES5:"..Slot[5].."~ES6:"..Slot[6].."~ES7:"..Slot[7].."~ES8:"..Slot[8].."~RAIN:"..EnableRain.."~STORM:"..EnableStorms.."~DYLIGHT:"..EnableLightOrbs.."~BGI:"..BGI.."~") end
+    circleButton(785, 450, 20, OutputFunc, "| S |")
+    
+elseif MODE == "DOWNLOAD" then
+    --do download mode stuff
+    setNextFillColor(textLayer, 0.25, 0.45, 0.65, 0.80)
+    addBoxRounded(textLayer, 110, 110, rx - 220, ry - 220, 10)
+    
+    
+    addText(textLayer, font3, "Set store as", 145, 145)
+    addText(textLayer, font3, " destination", 145, 165)
+    OutputFunc = function() setOutput("STORENAV") end -- FIXME! NEEDS FUNCTIONALITY IN PB! --CONSIDER SOME KIND OF UPDATE FOR NAV POINT JUST IN CASE
+    circleButton(195, 200, 20, OutputFunc, "| D |")
+    
+    
+    addText(textLayer, font3, "  Load", 155, 270)
+    addText(textLayer, font3, " Store", 155, 290)
+    addText(textLayer, font3, "Contents", 155, 310)
+    OutputFunc = function() setOutput("FindStore") end 
+    circleButton(190, 340, 20, OutputFunc, "| C |")
+    
+    if string.sub(input, 1, 11) == "StoreFound:" then
+        UserChips = StrFind(input, "CHIPS:") or 0
+        connection = string.sub(12, string.len(input))
+        STATE = "LOADING"
+    elseif string.sub(input, 1, 8) == "NextDLC:" then
+        DLCProducts[math.floor(StrFind(input, "INDEX:"))] = string.sub(input, 15, string.len(input))
+        DLCConfirm = 0
+    end
+    
+    
+    if connection ~= nil then
+        setNextFillColor(textLayer, 0.25, 2, 0, 2)
+        addText(textLayer, font2, "CONNECTED TO STORE", 200, 580)
+        addText(textLayer, font2, connection, 200, 555)
+    end
+    
+    --show available DLC
+    i = 1 + (DLCPage * 10)
+    k = 0
+    if math.floor(#DLCProducts / 10) == DLCPage then
+        DLCListCond = (#DLCProducts % 10)
+    else
+        DLCListCond = 10
+    end
+    
+    
+    while i <= (DLCListCond + (DLCPage * 10)) do
+        k = k + 1 
+        
+        --if the item is already purchased, make button transparent :
+        if StrFind(DLCProducts[i], "NAME:") == StrFind(AvailableCreatures[k], "NAME:") then
+            OutputFunc = function() selectedDLC = DLCProducts[i] DLCCanBuy = 0 DLCConfirm = 0 end
+            squareButton(95 + ((i - (DLCPage * 10)) * 70), 420, 60, 60, 4, OutputFunc, "   "..i)
+            DLCImages[i] = loadImage(StrFind(DLCProducts[i], "IMGR:"))
+            setNextFillColor(BGLayer, 1, 1, 1, 0.4)
+            addImageSub(BGLayer, DLCImages[i], 100 + ((i - (DLCPage * 10)) * 70), 437, 48, 24, 0, 0, 920, 550)
+            
+            k = 0
+            i = i + 1
+        end
+        
+        
+        if k >= #AvailableCreatures then -- if the item is not purchased yet, display clear image:
+            OutputFunc = function() selectedDLC = DLCProducts[i] DLCCanBuy = 1 DLCConfirm = 0 end
+            squareButton(95 + ((i - (DLCPage * 10)) * 70), 420, 60, 60, 4, OutputFunc, "   "..i)
+            DLCImages[i] = loadImage(StrFind(DLCProducts[i], "IMGR:"))
+            setNextFillColor(BGLayer, 1, 1, 1, 1)
+            addImageSub(BGLayer, DLCImages[i], 100 + ((i - (DLCPage * 10)) * 70), 437, 48, 24, 0, 0, 920, 550)
+
+            i = i + 1
+            k = 0
+        end
+        
+    end
+    
+    --scroll through available purchases with:
+    OutputFunc = function() DLCPage = DLCPage - 1 if DLCPage < 0 then DLCPage = math.floor(#DLCProducts / 10) end end 
+    circleButton(140, 450, 13, OutputFunc, " < ")
+    OutputFunc = function() DLCPage = DLCPage + 1 if DLCPage > math.floor(#DLCProducts / 10) then DLCPage = 0 end end 
+    circleButton(880, 450, 13, OutputFunc, " > ")
+    --addText(textLayer, font3, DLCPage, 645, 310)
+    
+    --if no DLC was previously selected, set selected to 1. 
+    if selectedDLC == nil and #DLCProducts > 0 then
+        selectedDLC = DLCProducts[1]
+        DLCCanBuy = 0
+    end
+    
+    --Display details on current DLC item
+    if selectedDLC ~= nil then
+        
+        --detail container
+        setNextFillColor(BGLayer, 0, 0, 0, 0)
+        setNextStrokeColor(BGLayer, 0.75, 0.75, 0.75, 1)
+        setNextStrokeWidth(BGLayer, 0.5)
+        addBoxRounded(BGLayer, 275, 130, 620, 200, 4)
+        addText(textLayer, font3, "Name: "..StrFind(selectedDLC, "NAME:"), 280, 150)
+        --break up 'DESC:' property into readable lines, work backward from the nearest 'space' char at the char limit for each line
+        displayString = StrFind(selectedDLC, "DESC:")
+        t = 1
+        p = 0
+        while string.len(displayString) > 33 do
+            
+            p = 33
+            while p > 0 do
+                
+                if string.sub(displayString, p, p) == " " then
+                    lineEnd = p
+                    addText(textLayer, font2, string.sub(displayString, 1, lineEnd), 280, 150 + (t * 17))
+                    displayString = string.sub(displayString, lineEnd + 1, string.len(displayString))
+                    break
+                end
+                p = p - 1
+            end
+            t = t + 1
+        end
+        addText(textLayer, font2, string.sub(displayString, 1, string.len(displayString)), 280, 150 + (t * 17))
+        
+        --stats container
+        setNextFillColor(BGLayer, 0, 0, 0, 0)
+        setNextStrokeColor(BGLayer, 0.75, 0.75, 0.75, 1)
+        setNextStrokeWidth(BGLayer, 0.5)
+        addBoxRounded(BGLayer, 500, 135, 190, 190, 4)
+        addText(textLayer, font3, "Length: "..StrFind(selectedDLC, "SIZEX:"), 505, 155)
+        addText(textLayer, font3, "Height: "..StrFind(selectedDLC, "SIZEY:"), 505, 175)
+        addText(textLayer, font3, "Minimum Depth: "..StrFind(selectedDLC, "MINY:"), 505, 195)
+        addText(textLayer, font3, "Maximum Depth: "..StrFind(selectedDLC, "MAXY:"), 505, 215)
+        addText(textLayer, font3, "Speed: "..StrFind(selectedDLC, "SPD:"), 505, 235)
+        addText(textLayer, font3, "Power: "..StrFind(selectedDLC, "PWR:"), 505, 255)
+        addText(textLayer, font3, "Aggression: "..StrFind(selectedDLC, "AGGRO:"), 505, 275)
+        addText(textLayer, font3, "Metabolism: "..StrFind(selectedDLC, "METAB:"), 505, 295)
+        addText(textLayer, font3, "? ? ?: "..StrFind(selectedDLC, "SPECIAL:"), 505, 315)
+        
+        --fish image container
+        setNextFillColor(BGLayer, 0, 0, 0, 0)
+        setNextStrokeColor(BGLayer, 0.75, 0.75, 0.75, 1)
+        setNextStrokeWidth(BGLayer, 0.5)
+        addBoxRounded(BGLayer, 700, 135, 190, 190, 4)
+        
+        DLCImages.Current = loadImage(StrFind(selectedDLC, "IMGR:"))
+        setNextFillColor(BGLayer, 1, 1, 1, 1)
+        addImageSub(BGLayer, DLCImages.Current, 710, 180, 180, 90, 0, 0, 920, 550)
+        
+        --transaction container
+        setNextFillColor(BGLayer, 0, 0, 0, 0)
+        setNextStrokeColor(BGLayer, 0.75, 0.75, 0.75, 1)
+        setNextStrokeWidth(BGLayer, 0.5)
+        addBoxRounded(BGLayer, 500, 340, 395, 70, 4)
+        if math.floor(UserChips) < 9999999999 then
+            addText(textLayer, font3, "Available Chips: "..UserChips, 510, 400)
+        elseif math.floor(UserChips) > 9999999999 then
+            addText(textLayer, font3, "Available Chips: 1 Billion+", 510, 400)
+        end
+        if DLCConfirm == 3 then
+            addText(textLayer, font3, "Transaction Successful!", 510, 360)
+        end
+        
+    end
+    
+    
+    if DLCCanBuy == 1 and selectedDLC ~= nil then
+        addText(textLayer, font3, "Value: "..StrFind(selectedDLC, "PRICE:").." Chips", 510, 380)
+        if math.floor(UserChips) < math.floor(StrFind(selectedDLC, "PRICE:")) then --update with price FIXME
+            addText(textLayer, font3, "Cannot afford: Not enough Chips.", 510, 360)
+        elseif DLCConfirm == 0 then
+            addText(textLayer, font3, "Purchase this item now?", 510, 360)
+            OutputFunc = function() DLCConfirm = 1 end 
+            circleButton(775, 380, 20, OutputFunc, "| P |")
+        elseif DLCConfirm == 1 then
+            addText(textLayer, font3, "Confirm Purchase: "..StrFind(selectedDLC, "NAME:").."?", 510, 360)
+            OutputFunc = function() setOutput("BUYDLC:".."NAME:".. StrFind(selectedDLC, "NAME:").."~PRICE:"..math.floor(StrFind(selectedDLC, "PRICE:")) .."~") DLCConfirm = 2 STATE = "LOADING" end 
+            circleButton(855, 380, 20, OutputFunc, "| C |")
+        elseif DLCConfirm == 2 then
+            addText(textLayer, font3, "Communicating with store...", 510, 360)
+        end
+        elseif DLCCanBuy == 0 and selectedDLC ~= nil and DLCConfirm == 0 then
+        addText(textLayer, font3, "You already own this item.", 510, 360)
+
+    end
+    
+    if string.sub(input, 1, 12) == "DLCAPPROVED:" then
+        if DLCConfirm == 2 then
+            UserChips = math.floor(UserChips) - math.floor(StrFind(selectedDLC, "PRICE:"))
+            DLCConfirm = 3
+            AvailableCreatures[#AvailableCreatures + 1] = selectedDLC
+            selectedDLC = nil
+            setOutput("FindStore") --update DLC page by re-contacting store and comparing owned vs unowned
+        end
+    end
+    
+end --end of modes
+
+if input == "CLEAR" then
+    output = ""
+end
+
+requestAnimationFrame(4)
+    
+    

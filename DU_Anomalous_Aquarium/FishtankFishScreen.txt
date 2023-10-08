@@ -1,0 +1,582 @@
+    
+    
+local BGLayer = createLayer()
+CreatureLayer = createLayer()
+TextLayer = createLayer()
+Font1 = loadFont("TurretRoad", 20)
+
+local MaxRage = 500
+    
+
+--used by loadFish function to identify substrings
+function StrFind(String, Key)
+    found, start = string.find(String, Key)
+    if found == nil or start == nil then
+        return "0000000000"
+    end
+    subString = string.sub(String, start + 1, string.len(String))
+    fin = string.find(subString, '~')
+    if fin == nil or start == nil then
+        return "0000000000"
+    end
+    return string.sub(subString, 1, fin - 1)
+end
+
+--Splits fish data string into usable fields for each Creature
+function loadCreature(CreatureDataS, newCreature)
+    newCreature.Img = StrFind(CreatureDataS, "IMGR:")
+    newCreature.SizeX = math.floor(StrFind(CreatureDataS, "SIZEX:"))
+    newCreature.SizeY = math.floor(StrFind(CreatureDataS, "SIZEY:"))
+    newCreature.MaxY = math.floor(StrFind(CreatureDataS, "MAXY:"))
+    newCreature.MinY = math.floor(StrFind(CreatureDataS, "MINY:"))
+    newCreature.Speed = math.floor(StrFind(CreatureDataS, "SPD:"))
+    newCreature.Metabolism = math.floor(StrFind(CreatureDataS, "METAB:"))
+    newCreature.Special = math.floor(StrFind(CreatureDataS, "SPECIAL:"))
+    newCreature.Ability = StrFind(CreatureDataS, "ABILITY:")
+    newCreature.Growth = 1.15
+    newCreature.Power = math.floor(StrFind(CreatureDataS, "PWR:"))
+    newCreature.Transparency = tonumber(StrFind(CreatureDataS, "CTHRU:"))
+    newCreature.Fade = 0
+    newCreature.Hunger = 0
+    newCreature.Aggression = math.floor(StrFind(CreatureDataS, "AGGRO:"))
+    newCreature.Rage = 0
+    newCreature.Target = "NONE"
+    newCreature.XMov = math.random(-13, -4)
+    newCreature.YMov = math.random(-8, 8)
+    newCreature.XPos = math.random(0, 1000)
+    newCreature.YPos = newCreature.MinY + 20
+    newCreature.MovCD = 0
+    newCreature.HuntCD = 0
+    newCreature.Fade = 1
+    newCreature.Light = 0 --interacts with invisible 'light' objects
+end
+
+function rotate(RSRC, RTGT)
+    local x = math.abs(RTGT.XPos) - math.abs(RSRC.XPos)
+    local y = math.abs(RTGT.YPos) - math.abs(RSRC.YPos)
+    local rotation = math.atan(x,y)
+    return -rotation
+        end
+
+function newRaindrop()
+    local rainChance = math.random(0,3)
+    
+    if rainChance > 0 then
+        Raindrops[#Raindrops + 1] = {}
+        Raindrops[#Raindrops].XPos = math.random(0, 1200)
+        Raindrops[#Raindrops].YPos = 1
+        Raindrops[#Raindrops].YMov = 8
+        Raindrops[#Raindrops].Life = 1
+    end
+end
+
+function newLightOrb()
+        LightOrbs[#LightOrbs + 1] = {}
+        LightOrbs[#LightOrbs].XPos = math.random(0, 1024)
+        LightOrbs[#LightOrbs].YPos = 100 + (50 * #LightOrbs)
+        LightOrbs[#LightOrbs].XMov = math.random(7, 12)
+end
+
+--  UpdateFish - Updates movements and draws the fish
+function UpdateCreature(Critter)
+  
+    targetFood = nil
+    local facing = "RIGHT"
+    
+    --run loop to determine which food is closest (up to 5 pieces at a time)
+    if #Food > 0 and Critter.HuntCD <= 0 then
+        local k = 0
+        nearFoodX = 2000
+        while k < #Food do
+            k = k + 1
+            if ((math.abs(Food[k].XPos) - math.abs(Critter.XPos)) < nearFoodX) and (Food[k].YPos > Critter.MinY) and (Food[k].YPos < Critter.MaxY) then
+                nearFoodX = Food[k].XPos
+                targetFood = Food[k]
+                targetFood.Index = k
+            end
+        end
+    end
+    
+    --Hunting Behavior Block
+    
+    if targetFood ~= nil and Critter.HuntCD <= 0 then
+        
+        if targetFood.XPos > Critter.XPos + 5 then
+            Critter.XPos = Critter.XPos + (Critter.Speed / 2)
+            setNextRotation(CreatureLayer, rotate(Critter, targetFood) + 1.77)
+        else
+            Critter.XPos = Critter.XPos - (Critter.Speed / 2)
+            facing = "LEFT"
+            setNextRotation(CreatureLayer, rotate(Critter, targetFood) - 1.37)
+        end
+        
+        if targetFood.YPos > Critter.YPos and (targetFood.YPos - Critter.YPos) > Critter.Speed then
+            Critter.YPos = Critter.YPos + (Critter.Speed / 2)
+        elseif targetFood.YPos < Critter.YPos and (Critter.YPos - targetFood.YPos) > Critter.Speed then
+            Critter.YPos = Critter.YPos - (Critter.Speed / 2)
+        end
+        
+        if math.sqrt( (math.abs(Critter.XPos - targetFood.XPos)^2) + (math.abs(Critter.YPos  - targetFood.YPos)^2) ) < (Critter.SizeX / 2) then
+            -- kill food, increase fish size, instate cooldown
+            table.move(Food, targetFood.Index + 1, #Food, targetFood.Index)
+            Food[#Food] = nil
+            Critter.HuntCD = 900 - Critter.Metabolism
+        end
+    end
+    
+    --Enraged Movement Block
+    local k = 0
+    local closestDist = 2000
+    local rangeBonus = 0
+    while k < #Creatures and Critter.Rage < MaxRage do
+        k = k + 1
+        if (Critter.XPos ~= Creatures[k].XPos) then
+            newDist = math.sqrt( (math.abs(Critter.XPos - Creatures[k].XPos)^2) + (math.abs(Critter.YPos  - Creatures[k].YPos)^2) ) - Critter.Aggression
+        
+            if newDist < closestDist then
+                closestDist = newDist
+                Critter.Target = Creatures[k]
+            end
+        
+            if Weather == "RAIN" then rangeBonus = Critter.SizeX / 3 end
+            if Weather == "STORM" then rangeBonus = Critter.SizeX / 2 end
+            
+            if newDist < (Critter.SizeX * 1.25 + rangeBonus) then
+                Critter.Rage = Critter.Rage + Critter.Aggression
+                if Weather == "RAIN" then Critter.Rage = Critter.Rage + (Critter.Aggression / 2) end
+                if Weather == "STORM" then Critter.Rage = Critter.Rage + (Critter.Aggression) end
+                if Critter.Hunger > (1000 - Critter.Metabolism) then Critter.Rage = Critter.Rage + (Critter.Aggression) end
+            end
+        end
+        
+    end
+    
+    if targetFood == nil and Critter.Rage >= MaxRage then
+        if Critter.Target.XPos > Critter.XPos then
+            Critter.XPos = Critter.XPos + (Critter.Speed)
+            setNextRotation(CreatureLayer, rotate(Critter, Critter.Target) + 1.77)
+        else
+            Critter.XPos = Critter.XPos - (Critter.Speed)
+            facing = "LEFT"
+            setNextRotation(CreatureLayer, rotate(Critter, Critter.Target) - 1.37)
+        end
+        
+        if Critter.Target.YPos > Critter.YPos and (Critter.Target.YPos - Critter.YPos) > Critter.Speed then
+            Critter.YPos = Critter.YPos + (Critter.Speed / 2)
+        elseif Critter.Target.YPos < Critter.YPos and (Critter.YPos - Critter.Target.YPos) > Critter.Speed then
+            Critter.YPos = Critter.YPos - (Critter.Speed / 2)
+        end
+        
+        --boundary check
+        if Critter.YPos < Critter.MinY then
+            Critter.Rage = 0
+            Critter.Target = "NONE"
+        --hit check
+        elseif math.sqrt( (math.abs(Critter.XPos - Critter.Target.XPos)^2) + (math.abs(Critter.YPos  - Critter.Target.YPos)^2) ) < ((Critter.SizeX / 2)  + Critter.Power) then
+            Critter.Rage = 0
+            Critter.Target.Rage = Critter.Target.Rage / 2
+            Critter.Target.Target = "NONE"
+            if Critter.XPos < Critter.Target.XPos then
+                Critter.Target.XMov = (Critter.Target.Speed * 2)
+            else
+                Critter.Target.XMov = (Critter.Target.Speed * 2) * -1
+            end
+            Critter.Target.YMov = (Critter.Target.Speed + 3) * -1
+            Critter.Target.MovCD = math.random(math.floor(Critter.Speed / 2), math.floor(Critter.Speed * 4))
+        end
+    end
+    
+    
+    --Standard Movement Block
+    if targetFood == nil and Critter.Rage < MaxRage then
+
+        if Critter.YPos > Critter.MaxY then
+            Critter.YPos = Critter.MaxY - 1
+            Critter.YMov = math.random(-1, 0)
+        elseif Critter.YPos < Critter.MinY then
+            Critter.YPos = Critter.MinY + 1
+            Critter.YMov = math.random(0, 1)
+        end
+        
+        if Critter.XPos > 1025 then
+            Critter.XPos = 1024
+            Critter.XMov = math.random(-1, 0)
+        elseif Critter.XPos < 0 then
+            Critter.XPos = 1
+            Critter.XMov = math.random(0, 1)
+        end
+
+        math.randomseed(Critter.YPos + Critter.XPos + getTime())
+
+        if Critter.MovCD <= 0 then
+            Critter.XMov = math.random(-Critter.Speed, Critter.Speed)
+            Critter.YMov = math.random(math.floor(-Critter.Speed / 4), math.floor(Critter.Speed / 2))
+            Critter.MovCD = math.random(math.floor(Critter.Speed * 2), math.floor(Critter.Speed * 4))
+            if Critter.YPos < (Critter.MaxY / 2) then
+                Critter.YMov = Critter.YMov - (Critter.Speed / 4)
+            end
+        end
+
+        Critter.MovCD = Critter.MovCD - 1
+
+        Critter.XPos = Critter.XPos + Critter.XMov
+        Critter.YPos = Critter.YPos + Critter.YMov
+        if Weather == "RAIN" then Critter.YPos = Critter.YPos + math.abs(Critter.YMov / 4) end
+        if Weather == "STORM" then Critter.YPos = Critter.YPos + math.abs(Critter.YMov / 2) end
+
+        Critter.XMov = Critter.XMov * 0.93
+        Critter.YMov = Critter.YMov * 0.93
+    
+        if Critter.MaxY - Critter.YPos > 4 then --slight natural drop
+            Critter.YPos = Critter.YPos + 0.5
+        end
+        
+        if Critter.XMov <= 0 then
+            facing = "LEFT"
+        end
+        
+    end -- end standard movement block
+    
+    if Critter.Light > 0 then Critter.Light = Critter.Light - 0.02 end
+
+    setNextFillColor(CreatureLayer, (0.85 - (Darkness / 1.2) - (Critter.YPos / 3000) + (Flash * 0.06)) - Critter.Light, (0.85 - (Darkness / 1.2) - (Critter.YPos / 3000) + (Flash * 0.12)) - Critter.Light, (0.85 - (Darkness / 1.2) - (Critter.YPos / 3000) + (Flash * 0.18)) - Critter.Light, Critter.Transparency)
+    Critter.model = loadImage(Critter.Img)
+    if facing == "LEFT" then
+        addImageSub(CreatureLayer, Critter.model, Critter.XPos - (Critter.SizeX / 2), Critter.YPos - ((Critter.SizeY / 2) * Critter.Growth), Critter.SizeX * Critter.Growth, Critter.SizeY * Critter.Growth, 0, 0, 920, 550)
+    else
+        addImageSub(CreatureLayer, Critter.model, Critter.XPos - (Critter.SizeX / 2), Critter.YPos - ((Critter.SizeY / 2) * Critter.Growth), Critter.SizeX * Critter.Growth, Critter.SizeY * Critter.Growth, 920, 0, 920, 550)
+    end 
+    
+    
+    targetFood = nil
+    Critter.Hunger = Critter.Hunger + 1
+    Critter.HuntCD = Critter.HuntCD - 1
+    if Critter.Growth > 1.05 and Critter.Hunger >= (1000 - Critter.Metabolism) then
+        Critter.Growth = Critter.Growth - 0.005
+    elseif Critter.Growth < 1.6 and Critter.HuntCD > 0 then
+        Critter.Growth = Critter.Growth + 0.015
+    end
+    
+    --Special Features:
+    if Critter.Ability == "WEATHER" then
+        WeatherCD = WeatherCD - Critter.Special
+    elseif Critter.Ability == "LIGHTNING" then
+        LightningCD = LightningCD - Critter.Special
+    elseif Critter.Ability == "RAIN" then
+        MaxRainDrops = MaxRainDrops + 10
+    elseif Critter.Ability == "ANGER" then
+        i = 0
+        while i < #Creatures do
+            i = i + 1
+            Creatures[i].Rage = Creatures[i].Rage + (Critter.Aggression / 2)
+        end
+    elseif Critter.Ability == "PEACE" then
+        i = 0
+        while i < #Creatures do
+            i = i + 1
+            Creatures[i].Rage = Creatures[i].Rage - (Critter.Aggression / 2)
+        end    
+    end
+    --STORM:
+    
+end --END OF UPDATEFISH
+
+
+                                                                 -- EXECUTION --
+
+
+local rx, ry = getResolution()
+input = getInput()
+output = "NULL"
+math.randomseed(getTime()* 258 - 102)
+
+if INIT == nil then
+BGI = 2
+EnableRain = 1
+EnableStorms = 1
+EnableLightOrbs = 0    Food = {}
+    Raindrops = {}
+    MaxRainDrops = 80
+    LightOrbs = {}
+    FoodCD = 5
+    CreatureData = {}
+    Creatures = {}
+    Darkness = 0
+    Flash = 0
+    Weather = "CLEAR"
+    WeatherCD = math.random(1000, 3000)
+    LightningCD = math.random(15, 75)
+    
+CreatureData[1] = "NAME:Nothing~"
+Creatures[1] = {}
+loadCreature(CreatureData[1], Creatures[1])
+
+CreatureData[2] = "NAME:Clownfish~IMGR:assets.prod.novaquark.com/131682/3019aa71-ad5f-48c1-bb9f-ce03240297b2.png~SIZEX:30~SIZEY:20~MAXY:350~MINY:180~CTHRU:1~SPD:11~PWR:6~AGGRO:2~METAB:150~SPECIAL:0~ABILITY:~DESC:A fish which survived in nature thanks to a strong symbiotic relationship with sea anemones.~PRICE:50~"
+Creatures[2] = {}
+loadCreature(CreatureData[2], Creatures[2])
+
+CreatureData[3] = "NAME:Tail-Spot Wrasse~IMGR:assets.prod.novaquark.com/131682/4e434e3c-2d02-4b6c-a601-44c2855cba66.png~SIZEX:45~SIZEY:25~MAXY:450~MINY:380~CTHRU:1~SPD:7~PWR:9~AGGRO:4~METAB:150~SPECIAL:0~ABILITY:~DESC:A colorful fish that prefers water near to the bottom of the reef, where it can blend in to the colors and shapes of coral.~PRICE:75~"
+Creatures[3] = {}
+loadCreature(CreatureData[3], Creatures[3])
+
+CreatureData[4] = "NAME:Nothing~"
+Creatures[4] = {}
+loadCreature(CreatureData[4], Creatures[4])
+
+CreatureData[5] = "NAME:Clownfish~IMGR:assets.prod.novaquark.com/131682/3019aa71-ad5f-48c1-bb9f-ce03240297b2.png~SIZEX:30~SIZEY:20~MAXY:350~MINY:180~CTHRU:1~SPD:11~PWR:6~AGGRO:2~METAB:150~SPECIAL:0~ABILITY:~DESC:A fish which survived in nature thanks to a strong symbiotic relationship with sea anemones.~PRICE:50~"
+Creatures[5] = {}
+loadCreature(CreatureData[5], Creatures[5])
+
+CreatureData[6] = "NAME:Mosaic Tang~IMGR:assets.prod.novaquark.com/131682/b2c1d68b-c9ad-4630-8897-a01d51f1b649.png~SIZEX:35~SIZEY:25~MAXY:350~MINY:180~CTHRU:1~SPD:11~PWR:6~AGGRO:2~METAB:150~SPECIAL:0~ABILITY:~DESC:A colorful tang variant with elaborate markings and patterns. Collectors often begin their journey with this species.~PRICE:50~"
+Creatures[6] = {}
+loadCreature(CreatureData[6], Creatures[6])
+
+CreatureData[7] = "NAME:Nothing~"
+Creatures[7] = {}
+loadCreature(CreatureData[7], Creatures[7])
+
+CreatureData[8] = "NAME:Bluegreen Chromis~IMGR:assets.prod.novaquark.com/131682/a40ef7b5-0330-4db8-b2d3-016353c13edf.png~SIZEX:40~SIZEY:25~MAXY:250~MINY:120~CTHRU:1~SPD:13~PWR:5~AGGRO:1~METAB:150~SPECIAL:0~ABILITY:~DESC:A species of damselfish, made popular amongst collectors by its vibrant colors. Small, peaceful and nonterritorial, they live near to the surface.~PRICE:50~"
+Creatures[8] = {}
+loadCreature(CreatureData[8], Creatures[8])
+        
+    --Creatures[1] = {}
+
+    --loadCreature(CreatureData[1], Creatures[1])
+
+    newLightOrb()
+    newLightOrb()
+    newLightOrb()
+    newLightOrb()
+    newLightOrb()
+    newLightOrb()
+    newLightOrb()
+    newLightOrb()
+    newLightOrb()
+    newLightOrb()
+    
+    INIT = "DONE"
+end
+
+-- Create Food
+if (input == "FEED") and (FoodCD <= 0) then
+    Food[#Food + 1] = {}
+    Food[#Food].XPos = math.random(200, 800)
+    Food[#Food].YPos = 1
+    Food[#Food].Life = 1000
+    
+    
+    if #Food > 8 then
+        FoodCD = 150
+    else
+        FoodCD = 15
+    end
+end
+FoodCD = FoodCD - 1
+
+
+
+-- Update Food 
+local i = 0
+while i < #Food do
+    
+    i = i + 1
+    if Food[i].YPos < 535 then
+        Food[i].YPos = Food[i].YPos + 1
+    end
+    Food[i].Life = Food[i].Life - 1
+    setNextFillColor(CreatureLayer, 1, 0.2, 0.1, 1)
+    addCircle(CreatureLayer, Food[i].XPos, Food[i].YPos, 4)
+    
+    if Food[i].Life <= 0 then
+        table.move(Food, i + 1, #Food, i)
+        Food[#Food] = nil
+    end
+end
+
+
+
+-- Weather effects 
+if string.sub(input, 1, 4) == "RAIN" then
+    if string.sub(input, 5, 9) == "STORM" then
+        Weather = "STORM"
+        WeatherCD = -1
+    elseif string.sub(input, 5, 9) == "CLEAR" then
+        Weather = "CLEAR"
+        WeatherCD = math.random(1000, 3000)
+    else
+        Weather = "RAIN"
+    end
+    WeatherCD = -1
+end
+
+
+if WeatherCD == 0 and (EnableRain == 1 or EnableStorms == 1) then
+    local weatherSeverity = math.random(0,3)
+    
+    if EnableStorms == 0 and EnableRain == 1 then
+        weatherSeverity = 0
+    elseif EnableStorms == 1 and EnableRain == 0 then
+        weatherSeverity = 3
+    end
+    
+    if weatherSeverity > 2 then
+        Weather = "STORM"
+    elseif weatherSeverity <= 2 then
+        Weather = "RAIN"
+    end
+    setOutput("CLEAR")
+elseif WeatherCD == 0 then
+    WeatherCD = math.random(1000, 3000)
+end
+
+
+if Weather == "STORM" then
+    LightningCD = LightningCD - 1
+    if LightningCD <= 0 then
+        LightningCD = math.random(15, 75)
+        Flash = math.random(2,5)
+    end
+
+    if Darkness < 0.35 then
+        Darkness = Darkness + 0.005
+    end
+    
+    if #Raindrops < MaxRainDrops then
+        newRaindrop()
+        newRaindrop()
+        newRaindrop()
+        newRaindrop()
+    end
+
+elseif Weather == "RAIN" then
+    if Darkness < 0.25 then
+        Darkness = Darkness + 0.005
+    end
+    
+    if #Raindrops < 40 then
+        newRaindrop()
+        newRaindrop()
+    end
+end
+
+if WeatherCD <= -600 then
+    WeatherCD = math.random(1000, 3000)
+    Weather = "CLEAR"
+end
+
+RainModel = loadImage("assets.prod.novaquark.com/131682/e8cf30bf-a493-47f8-bd71-e3295544ed74.png")
+
+
+-- Update Raindrops 
+local i = 0
+while i < #Raindrops do
+    
+    i = i + 1
+    Raindrops[i].YPos = Raindrops[i].YPos + Raindrops[i].YMov
+    Raindrops[i].YMov = Raindrops[i].YMov * 0.95
+    Raindrops[i].Life = Raindrops[i].Life - 0.025
+    setNextFillColor(CreatureLayer, 0, 0.1, 0.3, Raindrops[i].Life)
+    raindropRand = math.random(0,2) * 50
+    addImageSub(TextLayer, RainModel, Raindrops[i].XPos, Raindrops[i].YPos, 4, 17 * (Raindrops[i].Life), raindropRand, 0, 50, 150  )
+    if Raindrops[i].Life <= 0 then
+        table.move(Raindrops, i + 1, #Raindrops, i)
+        Raindrops[#Raindrops] = nil
+    end
+end
+
+--Weather cleanup
+WeatherCD = WeatherCD - 1
+if Darkness > 0 then Darkness = Darkness - 0.0025 end
+if Flash > 0 then Flash = Flash - 1 end
+MaxRainDrops = 80
+
+
+-- Update Light Orbs 
+if EnableLightOrbs == 1 then
+    local i = 1
+    local k = 0
+    while i < #LightOrbs do
+    
+        k = k + 1
+    
+        if k == 1 then
+            LightOrbs[i].XPos = LightOrbs[i].XPos + LightOrbs[i].XMov
+    
+            if LightOrbs[i].XPos < 0 then
+                LightOrbs[i].XPos = 1
+                LightOrbs[i].XMov = LightOrbs[i].XMov * -1
+            end
+    
+            if LightOrbs[i].XPos > 1024 then
+                LightOrbs[i].XPos = 1023
+                LightOrbs[i].XMov = LightOrbs[i].XMov * -1
+            end
+            --setNextFillColor(TextLayer, 0.7, 0.7, 1, 1)
+            --addCircle(TextLayer, LightOrbs[i].XPos, LightOrbs[i].YPos, 2)
+        end
+    
+        local LightDist = math.sqrt( (math.abs(LightOrbs[i].XPos - Creatures[k].XPos)^2) + (math.abs(LightOrbs[i].YPos - Creatures[k].YPos)^2) )
+    
+        if LightDist < 90 then
+            Creatures[k].Light = (0.2 / (LightDist / 90))
+            if Creatures[k].Light > 0.2 then Creatures[k].Light = 0.2 end
+        end
+        
+        if k >= #Creatures then
+            i = i + 1
+            k = 0
+        end
+    end
+end
+    
+    
+
+-- Update each existing fish 
+local i = 0
+while i < #Creatures do
+    i = i + 1
+    if Creatures[i].Name ~= "Nothing" then --skip empty slots
+        UpdateCreature(Creatures[i])
+    end
+end
+
+-- Add background and debug indicators 
+if input == "BG1" then
+    BGI = 1
+elseif input == "BG2" then
+    BGI = 2
+elseif input == "BG3" then
+    BGI = 3
+elseif input == "BG4" then
+    BGI = 4
+    
+elseif string.sub(input, 1, 10) == "ENABLERAIN" then
+    EnableRain = math.floor(StrFind(input, "ENABLERAIN:"))
+    
+elseif string.sub(input, 1, 12) == "ENABLESTORMS" then
+    EnableStorms = math.floor(StrFind(input, "ENABLESTORMS:"))
+    
+elseif string.sub(input, 1, 15) == "ENABLELIGHTORBS" then
+    EnableLightOrbs = math.floor(StrFind(input, "ENABLELIGHTORBS:"))
+end
+
+if BGI == 1 then 
+    BGC = loadImage("assets.prod.novaquark.com/38363/de6f4e3f-577d-4e09-9edd-d20ef566d212.png")
+elseif BGI == 2 then
+    BGC = loadImage("assets.prod.novaquark.com/38363/c5844259-3748-46b7-9d4f-bb7ab4511adc.jpg")
+elseif BGI == 3 then
+    BGC = loadImage("assets.prod.novaquark.com/38363/fcedec09-dd92-483c-9004-3ba92b974bdc.jpg")
+elseif BGI == 4 then
+    BGC = loadImage("assets.prod.novaquark.com/38363/416e9988-3460-417d-a4c8-e352abe7e142.jpg")
+end
+setNextFillColor(BGLayer, 0.65 - Darkness + (Flash * 0.06), 0.65 - Darkness + (Flash * 0.10), 0.65 - Darkness + (Flash * 0.14), 1)
+addImage(BGLayer, BGC, 0, 0, rx, ry)
+
+--test statements
+--addText(TextLayer, Font1, "Render Cost: "..getRenderCost(), 100, 100)
+--addText(TextLayer, Font1, "Render Budget: "..getRenderCostMax(), 100, 125)
+
+setOutput(output)
+requestAnimationFrame(2)
+    
+    

@@ -1,0 +1,1 @@
+"PRICE:50~NAME:Bluegreen Chromis~IMGR:assets.prod.novaquark.com/131682/a40ef7b5-0330-4db8-b2d3-016353c13edf.png~SIZEX:40~SIZEY:25~MAXY:250~MINY:120~CTHRU:1~SPD:13~PWR:5~AGGRO:1~METAB:150~SPECIAL:0~ABILITY:~DESC:A species of damselfish, made popular amongst collectors by its vibrant colors.~"
